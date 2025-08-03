@@ -13,7 +13,7 @@ tidy:
 vendor:
 	go mod vendor
 
-clean: tidy vendor
+install: tidy vendor
 
 migrate:
 	@echo "Migrating database"
