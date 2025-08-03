@@ -31,4 +31,4 @@ jobs:
           gcloud run deploy meet-loop-api \
             --image gcr.io/$PROJECT_ID/meet-loop-api \
             --platform managed \
-            --region <REGION>  # Replace with your desired region
+            --region $REGION  # Replace with your desired region
