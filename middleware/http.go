@@ -19,9 +19,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type Response struct {
-	Error   string `json:"error"`
-	Data    any    `json:"data"`
-	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+	Data    any    `json:"data,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 func OK(w http.ResponseWriter, r *http.Request) Handler {
@@ -30,10 +30,10 @@ func OK(w http.ResponseWriter, r *http.Request) Handler {
 
 func FatalError(v Response, err error) Handler {
 	return func(w http.ResponseWriter, r *http.Request) Handler {
-		slog.ErrorContext(r.Context(), "fatal error", "origin", "JSON > json.NewEncoder", "data", fmt.Sprintf("%+v", v), "message", err.Error())
+		slog.ErrorContext(r.Context(), "fatal error", "origin", "JSON > json.NewEncoder", "data", v, "message", err.Error())
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`Internal server error. Please try again or contact <a href="mailto:b.ibirogba@gmail.com">Support</a>`))
+		w.Write([]byte(`Internal server error. Please try again or contact <a href="mailto:dev@shiplabs.dev">Support</a>`))
 		return OK
 	}
 }
@@ -58,16 +58,14 @@ func CodeText(code int, text string) Handler {
 }
 
 func Error(err error) Handler {
-	if err == nil {
-		return OK
-	}
-
 	var code int
-	ok := errors.Is(internal.ValidationError{}, err)
-	slog.Info("error", "type", err)
+	var v internal.ValidationError
+	var data any
+
 	switch {
-	case ok:
+	case errors.As(err, &v):
 		code = http.StatusUnprocessableEntity
+		data = v.RawErrors()
 	case errors.Is(err, internal.ErrExists):
 		code = http.StatusConflict
 	case errors.Is(err, internal.ErrInvalidRequest):
@@ -100,6 +98,7 @@ func Error(err error) Handler {
 		return Code(code, JSON(Response{
 			Error:   err.Error(),
 			Message: http.StatusText(code),
+			Data:    data,
 		}))
 	}
 }
