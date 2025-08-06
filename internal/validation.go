@@ -5,44 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/Oudwins/zog"
+	"github.com/Oudwins/zog/zconst"
 )
 
 type ValidationError zog.ZogIssueMap
 
 func (v ValidationError) Error() string {
-	var errors []string
-	for _, value := range v {
-		for _, issue := range value {
-			errors = append(errors, fmt.Sprintf("%s: %s", issue.Path, issue.Message))
-		}
-	}
-
-	return strings.Join(errors, ", ")
+	return "Incorrect or missing form data."
 }
 
-func ValidateJSON[T any](r io.Reader, validator func(p *T) error) (T, error) {
-	var data T
+func (v ValidationError) RawErrors() []string {
+	var errors []string
+	for key, values := range zog.Issues.SanitizeMap(v) {
+		if key != zconst.ISSUE_KEY_FIRST {
+			errors = append(errors, values...)
+		}
+	}
+	return errors
+}
 
-	decoder := json.NewDecoder(r)
+func Validate[T any](schema *zog.StructSchema, body io.Reader) (result T, err error) {
+	decoder := json.NewDecoder(body)
 	decoder.DisallowUnknownFields()
 
-	err := decoder.Decode(&data)
-	if err != nil {
-		return data, fmt.Errorf("%w: unmarshalling json: %w", ErrUnmarshall, err)
+	if err := decoder.Decode(&result); err != nil {
+		return result, fmt.Errorf("%w:decoding json: %w", ErrInvalidRequest, err)
 	}
 
-	// Validate and parse data
-	err = validator(&data)
-	if e, ok := err.(ValidationError); ok {
-		return data, e
+	if err := schema.Validate(&result); len(err) != 0 {
+		return result, ValidationError(err)
 	}
 
-	if err != nil {
-		return data, fmt.Errorf("%w: %w: ", ErrInvalidRequest, err)
-	}
-
-	return data, nil
+	return result, nil
 }

@@ -22,10 +22,6 @@ var jwtClaimsKey = contextKey{}
 
 // UserMetadata represents the structure of the user_metadata in the JWT
 type UserMetadata struct {
-	BandListening string `json:"band_listening"`
-	BandReading   string `json:"band_reading"`
-	BandSpeaking  string `json:"band_speaking"`
-	BandWriting   string `json:"band_writing"`
 	Email         string `json:"email"`
 	Name          string `json:"name"`
 	Phone         string `json:"phone"`

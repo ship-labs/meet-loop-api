@@ -15,6 +15,7 @@ import (
 
 	"github.com/ship-labs/meet-loop-api/config"
 	"github.com/ship-labs/meet-loop-api/database"
+	"github.com/ship-labs/meet-loop-api/internal/pkg/sqlc"
 	"github.com/ship-labs/meet-loop-api/middleware"
 )
 
@@ -43,11 +44,8 @@ func main() {
 	slog.InfoContext(ctx, "main", "message", "Connected to database successfully")
 
 	port := cmp.Or(cfg.Port, config.DefaultPort)
-	mux := http.NewServeMux()
-
-	mux.Handle("GET /{$}", middleware.Auth(func(w http.ResponseWriter, r *http.Request) middleware.Handler {
-		return middleware.JSON(middleware.Response{Message: http.StatusText(http.StatusOK)})
-	}))
+	store := sqlc.NewStore(conn)
+	mux := defineRoutes(store)
 
 	handler := middleware.CorsMiddleware(mux)
 	handler = middleware.LoggingMiddleware(handler)

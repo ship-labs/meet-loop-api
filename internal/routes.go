@@ -4,19 +4,18 @@ package internal
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 var (
-	APIVersion                = "/api/v1"
-	GetDashboardData          = createRoute(http.MethodGet, "get-dashboard-data")
-	SendMessage               = createRoute(http.MethodPost, "chat")
-	GetMessages               = createRoute(http.MethodGet, "chat")
-	GetPractiseTests          = createRoute(http.MethodGet, "practice-tests")
-	GetTestQuestions          = createRoute(http.MethodGet, "questions/{testID}")
-	SubmitTest                = createRoute(http.MethodPost, "practise-tests/{testID}")
-	DeleteShortlistedInvestor = createRoute(http.MethodDelete, "shortlist/{investorID}")
+	APIVersion = "/api/v1"
+	Group      = createRoute(http.MethodPost, "group")
+	Profile    = createRoute(http.MethodGet, "/profile")
 )
 
 func createRoute(method, path string) string {
+	if strings.HasPrefix(path, "/") {
+		_, path, _ = strings.Cut(path, "/")
+	}
 	return fmt.Sprintf("%s %s/%s", method, APIVersion, path)
 }

@@ -1,0 +1,53 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: europe-west2
+  REPOSITORY: meet-loop-api
+  IMAGE_NAME: meet-loop-api-staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up gcloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_KEY }}
+
+      - name: Configure gcloud project
+        run: |
+          gcloud config set project $PROJECT_ID
+
+      - name: Set up docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker europe-west2-docker.pkg.dev
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t europe-west2-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME .
+          docker push europe-west2-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $IMAGE_NAME \
+            --image europe-west2-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME \
+            --platform managed \
+            --region $REGION \
+            --service-account continous-deployment@$PROJECT_ID.iam.gserviceaccount.com \
+            --set-env-vars DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            --set-env-vars DB_URL="${{ secrets.DB_URL }}" \
+            --set-env-vars SUPABASE_PROJECT_URL="${{ secrets.SUPABASE_PROJECT_URL }}" \
+            --set-env-vars SUPABASE_API_KEY="${{ secrets.SUPABASE_API_KEY }}" \
+            --set-env-vars FRONTEND_URL="${{ secrets.FRONTEND_URL_STAGING }}" \
+            --set-env-vars JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --set-env-vars Env="${{ secrets.ENV }}" \
+            --allow-unauthenticated
